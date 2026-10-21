@@ -54,4 +54,8 @@ export class RepoStructure extends BaseFileStructure {
         return join(this.getCacheDirectory(), 'forge', artifactVersion)
     }
 
+    public getNeoForgeCacheDirectory(artifactVersion: string): string {
+        return join(this.getCacheDirectory(), 'neoforge', artifactVersion)
+    }
+
 }

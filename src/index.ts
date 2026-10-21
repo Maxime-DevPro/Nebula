@@ -176,11 +176,17 @@ const generateServerCommand: CommandModule = {
                 describe: 'Forge version.',
                 type: 'string'
             })
+            .option('neoforge', {
+                describe: 'NeoForge version.',
+                type: 'string'
+            })
             .option('fabric', {
                 describe: 'Fabric version.',
                 type: 'string'
             })
             .conflicts('forge', 'fabric')
+            .conflicts('forge', 'neoforge')
+            .conflicts('fabric', 'neoforge')
     },
     handler: async (argv) => {
         argv.root = getRoot()
@@ -188,6 +194,7 @@ const generateServerCommand: CommandModule = {
         logger.debug(`Root set to ${argv.root}`)
         logger.debug(`Generating server ${argv.id} for Minecraft ${argv.version}.`,
             `\n\t└ Forge version: ${argv.forge}`,
+            `\n\t└ NeoForge version: ${argv.neoforge}`,
             `\n\t└ Fabric version: ${argv.fabric}`
         )
 
@@ -217,6 +224,7 @@ const generateServerCommand: CommandModule = {
             minecraftVersion,
             {
                 forgeVersion: argv.forge as string,
+                neoforgeVersion: argv.neoforge as string,
                 fabricVersion: argv.fabric as string
             }
         )

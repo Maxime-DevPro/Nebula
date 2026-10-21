@@ -20,6 +20,14 @@ export class VersionRepoStructure extends BaseFileStructure {
         return 'VersionRepoStructure'
     }
 
+    public getNamedVersionManifest(id: string): string {
+        return join(this.containerDirectory, id, `${id}.json`)
+    }
+
+    public getNamedVersionManifestURL(url: string, id: string): string {
+        return new URL(join(this.relativeRoot, id, `${id}.json`), url).toString()
+    }
+
     public getFileName(minecraftVersion: MinecraftVersion, loaderVersion: string): string {
         return `${minecraftVersion}-${this.name}-${loaderVersion}`
     }

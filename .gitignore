@@ -89,3 +89,5 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+# Local NeoForge test distribution (generated artifacts, never production)
+test-distribution/

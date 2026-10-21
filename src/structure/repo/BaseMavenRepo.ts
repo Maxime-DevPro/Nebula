@@ -37,6 +37,10 @@ export abstract class BaseMavenRepo extends BaseFileStructure {
             MavenUtil.mavenComponentsAsPath(group, artifact, version, classifier, extension)), baseURL).toString()
     }
 
+    public getArtifactUrlByPath(baseURL: string, path: string): string {
+        return new URL(join(this.relativeRoot, path), baseURL).toString()
+    }
+
     public async artifactExists(path: string): Promise<boolean> {
         return pathExists(path)
     }

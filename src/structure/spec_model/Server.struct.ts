@@ -7,12 +7,14 @@ import { VersionSegmentedRegistry } from '../../util/VersionSegmentedRegistry.js
 import { ServerMeta, getDefaultServerMeta, ServerMetaOptions, UntrackedFilesOption } from '../../model/nebula/ServerMeta.js'
 import { BaseModelStructure } from './BaseModel.struct.js'
 import { FabricModStructure } from './module/FabricMod.struct.js'
+import { NeoForgeModStructure } from './module/NeoForgeMod.struct.js'
 import { MiscFileStructure } from './module/File.struct.js'
 import { LibraryStructure } from './module/Library.struct.js'
 import { MinecraftVersion } from '../../util/MinecraftVersion.js'
 import { addSchemaToObject, SchemaTypes } from '../../util/SchemaUtil.js'
 import { isValidUrl } from '../../util/StringUtils.js'
 import { FabricResolver } from '../../resolver/fabric/Fabric.resolver.js'
+import { NeoForgeResolver } from '../../resolver/neoforge/NeoForge.resolver.js'
 
 export interface CreateServerResult {
     modContainer?: string
@@ -55,6 +57,7 @@ export class ServerStructure extends BaseModelStructure<Server> {
         options: {
             version?: string
             forgeVersion?: string
+            neoforgeVersion?: string
             fabricVersion?: string
         }
     ): Promise<CreateServerResult | null> {
@@ -86,6 +89,21 @@ export class ServerStructure extends BaseModelStructure<Server> {
             await fms.init()
             modContainer = fms.getContainerDirectory()
             serverMetaOpts.forgeVersion = options.forgeVersion
+        }
+
+        if (options.neoforgeVersion != null) {
+            // Keep the original Nebula/Helios folder layout for drop-in mods.
+            // ToggleableModuleStructure creates required/, optionalon/, optionaloff/.
+            const neoforgeMods = new NeoForgeModStructure(
+                absoluteServerRoot,
+                relativeServerRoot,
+                this.baseUrl,
+                minecraftVersion,
+                []
+            )
+            await neoforgeMods.init()
+            modContainer = neoforgeMods.getContainerDirectory()
+            serverMetaOpts.neoforgeVersion = options.neoforgeVersion
         }
 
         if (options.fabricVersion != null) {
@@ -198,6 +216,46 @@ export class ServerStructure extends BaseModelStructure<Server> {
 
                     const forgeModModules = await forgeModStruct.getSpecModel()
                     modules.push(...forgeModModules)
+                }
+
+                if(serverMeta.neoforge) {
+                    // Ensure existing loader-only server roots get their mod
+                    // folders back, even before NeoForge libraries are resolved.
+                    const neoforgeMods = new NeoForgeModStructure(
+                        absoluteServerRoot,
+                        relativeServerRoot,
+                        this.baseUrl,
+                        minecraftVersion,
+                        untrackedFiles
+                    )
+                    await neoforgeMods.init()
+
+                    const neoforgeResolver = new NeoForgeResolver(
+                        dirname(this.containerDirectory),
+                        '',
+                        this.baseUrl,
+                        minecraftVersion,
+                        serverMeta.neoforge.version,
+                        this.discardOutput,
+                        this.invalidateCache
+                    )
+
+                    if (!neoforgeResolver.isForVersion(minecraftVersion, serverMeta.neoforge.version)) {
+                        throw new Error(`NeoForge resolver does not support NeoForge ${serverMeta.neoforge.version} on Minecraft ${minecraftVersion}!`)
+                    }
+
+                    const neoforgeModule = await neoforgeResolver.getModule()
+                    modules.push(neoforgeModule)
+
+                    const modModules = await neoforgeMods.getSpecModel()
+                    const identifiers = new Set<string>()
+                    for (const mod of modModules) {
+                        if (identifiers.has(mod.id)) {
+                            throw new Error(`Duplicate NeoForge mod ID: ${mod.id}. Check the required/optionalon/optionaloff/ directories.`)
+                        }
+                        identifiers.add(mod.id)
+                    }
+                    modules.push(...modModules)
                 }
 
                 if(serverMeta.fabric) {
